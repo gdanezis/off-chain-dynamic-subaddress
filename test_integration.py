@@ -136,46 +136,8 @@ async def test_run_service_check_incorrect():
 
     await runner.cleanup()
 
-
 @pytest.mark.asyncio
-async def test_run_service_get_dynamic():
-    port=8085
-    vasp_address, vasp_subaddress, originator_claim, beneficiary_claim = fixture_example_claim(port)
-
-    cdb = ClaimsDB(vasp_address)
-    runner = await run_service(cdb, port=port)
-
-    claim = cdb.add_own_claim(originator_claim)
-    beneficiary_claim['unique_identifier'] = claim['unique_identifier']
-
-    client = DynClient()
-    status, dynamic_subaddress = await client.get_subaddress_from_beneficiary_claim(beneficiary_claim)
-    assert status == Status.fresh_dynamic_subaddress
-
-    await runner.cleanup()
-
-@pytest.mark.asyncio
-async def test_run_service_get_dynamic_bad_input():
-    port=8086
-    vasp_address, vasp_subaddress, originator_claim, beneficiary_claim = fixture_example_claim(port)
-
-    cdb = ClaimsDB(vasp_address)
-    runner = await run_service(cdb, port=port)
-
-    claim = cdb.add_own_claim(originator_claim)
-    beneficiary_claim['unique_identifier'] = claim['unique_identifier']
-
-    # Change the name
-    beneficiary_claim['legal_name'] = 'Other Name'
-
-    client = DynClient()
-    status, dynamic_subaddress = await client.get_subaddress_from_beneficiary_claim(beneficiary_claim)
-    assert status == Status.incorrect_record
-
-    await runner.cleanup()
-
-@pytest.mark.asyncio
-async def test_run_service_get_dynamic_from_dynamic():
+async def test_run_service_get_dynamic_from_dynamic_implicit():
     port=8087
     vasp_address, vasp_subaddress, originator_claim, beneficiary_claim = fixture_example_claim(port)
 
@@ -183,38 +145,16 @@ async def test_run_service_get_dynamic_from_dynamic():
     runner = await run_service(cdb, port=port)
 
     claim = cdb.add_own_claim(originator_claim)
-    beneficiary_claim['unique_identifier'] = claim['unique_identifier']
+    originator_claim['unique_identifier'] = claim['unique_identifier']
 
     client = DynClient()
-    status, dynamic_subaddress = await client.get_subaddress_from_beneficiary_claim(beneficiary_claim)
-    assert status == Status.fresh_dynamic_subaddress
 
-    status2, dynamic_subaddress2 = await client.get_subaddress_from_subaddress(f'http://localhost:{port}', dynamic_subaddress)
+    status2, dynamic_subaddress2 = await client.get_subaddress_from_subaddress(f'http://localhost:{port}', beneficiary_claim['long_term_subaddress'])
     assert status2 == Status.fresh_dynamic_subaddress
-    assert dynamic_subaddress != dynamic_subaddress2
+    assert dynamic_subaddress2 != beneficiary_claim['long_term_subaddress']
 
-    assert await cdb.check_own_dynamic_subaddress(dynamic_subaddress) == beneficiary_claim
-    assert await cdb.check_own_dynamic_subaddress(dynamic_subaddress2) == beneficiary_claim
-
-    await runner.cleanup()
-
-@pytest.mark.asyncio
-async def test_run_service_get_dynamic_bad_input():
-    port=8086
-    vasp_address, vasp_subaddress, originator_claim, beneficiary_claim = fixture_example_claim(port)
-
-    cdb = ClaimsDB(vasp_address)
-    runner = await run_service(cdb, port=port)
-
-    claim = cdb.add_own_claim(originator_claim)
-    beneficiary_claim['unique_identifier'] = claim['unique_identifier']
-
-    # Change the name
-    beneficiary_claim['legal_name'] = 'Other Name'
-
-    client = DynClient()
-    status, dynamic_subaddress = await client.get_subaddress_from_beneficiary_claim(beneficiary_claim)
-    assert status == Status.incorrect_record
+    assert await cdb.check_own_dynamic_subaddress(beneficiary_claim['long_term_subaddress']) == originator_claim
+    assert await cdb.check_own_dynamic_subaddress(dynamic_subaddress2) == originator_claim
 
     await runner.cleanup()
 

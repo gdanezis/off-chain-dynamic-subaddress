@@ -25,28 +25,9 @@ class DynClient():
             else:
                 return Status.incorrect_address
 
-
-    async def get_subaddress_from_beneficiary_claim(self, beneficiary_claim):
-
-        request = {
-            'type' : 1,
-            'beneficiary_travel_rule_record' : beneficiary_claim,
-        }
-
-        async with aiohttp.ClientSession() as session:
-
-            if await self.check_binding(beneficiary_claim['vasp_libra_address'], beneficiary_claim['verification_endpoint']):
-                async with session.post(beneficiary_claim['verification_endpoint'] + '/generate', json=request) as resp:
-                    response = await resp.json()
-
-                return (Status[response['status']], response.get('dynamic_subaddress', None))
-            else:
-                return Status.incorrect_address
-
     async def get_subaddress_from_subaddress(self, url, subaddress):
         request = {
-            'type' : 2,
-            'dynamic_subaddress' : subaddress,
+            'subaddress' : subaddress,
         }
 
         async with aiohttp.ClientSession() as session:

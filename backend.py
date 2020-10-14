@@ -102,6 +102,11 @@ class ClaimsDB:
         return (Status.fresh_dynamic_subaddress, subaddress_str)
 
     def add_own_claim(self, claim):
+
+        subaddress = claim['long_term_subaddress']
+        if subaddress in self.dyn_DB:
+            raise Exception(f'Subaddress {subaddress} already exists!')
+
         # Find a unique_id that is not in use
         while True:
             unique_id = urandom(32).hex()
@@ -112,7 +117,9 @@ class ClaimsDB:
         claim['unique_identifier'] = unique_id
 
         # Store the claim
+
         self.own_claim_DB[unique_id] = deepcopy(claim)
+        self.dyn_DB[subaddress] = deepcopy(claim)
 
         # Return the claim
         return claim

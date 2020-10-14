@@ -4,6 +4,7 @@ from os import urandom
 from backend import ClaimsDB, Status
 from client import DynClient
 
+import json
 
 routes = web.RouteTableDef()
 
@@ -29,6 +30,11 @@ async def check_own_claim(request):
             'status' : Status.unexpected_error.value
         }
 
+    print('\n\nRequest (/check):\n')
+    print(json.dumps(claim, indent=4))
+    print('\nResponse:\n')
+    print(json.dumps(response, indent=4))
+
     return web.json_response(data=response)
 
 @routes.post('/generate')
@@ -38,35 +44,17 @@ async def generate_dynamic_subaddress(request):
         claim_db = request.app['db']
         generation_request = await request.json()
 
-        # We handle 2 types of generation requests:
-
-        # Type 1: BTVR -> Dynamic
-        if generation_request['type'] == 1:
-
-            # Check our own claim
-            claim = generation_request['beneficiary_travel_rule_record']
-            status = await claim_db.check_own_claim(claim)
-            if status != Status.correct_record:
-                raise ResponseError(status)
-
-        # Type 2: Dynamic -> Dynamic
-        elif generation_request['type'] == 2:
-
-            # Check that the subaddress exists
-            subaddress = generation_request['dynamic_subaddress']
-            claim = await claim_db.check_own_dynamic_subaddress(subaddress)
-            if claim is None:
-                raise ResponseError(Status.invalid_subaddress)
-
-        else:
-            raise ResponseError(Status.unknown_command)
+        # Check that the subaddress exists
+        subaddress = generation_request['subaddress']
+        claim = await claim_db.check_own_dynamic_subaddress(subaddress)
+        if claim is None:
+            raise ResponseError(Status.invalid_subaddress)
 
         # Issue and return a fresh subaddress
         status, dyn_subaddr = await claim_db.generate_dynamic_subaddress(claim)
         response = {
             'status' : status.value,
             'dynamic_subaddress': dyn_subaddr,
-            'verification_endpoint': claim['verification_endpoint']
         }
 
     except ResponseError as e:
@@ -74,16 +62,23 @@ async def generate_dynamic_subaddress(request):
                 'status' : e.status.value
             }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(e)
         response = {
             'status' : Status.unexpected_error.value
         }
 
+    print('\n\nRequest (/generate):\n')
+    print(json.dumps(generation_request, indent=4))
+    print('\nResponse:\n')
+    print(json.dumps(response, indent=4))
+
     return web.json_response(data=response)
 
 
 @routes.post('/attest')
-async def generate_dynamic_subaddress(request):
+async def attest(request):
 
     try:
         claim_db = request.app['db']
@@ -126,6 +121,11 @@ async def generate_dynamic_subaddress(request):
         response = {
             'status' : Status.unexpected_error.value
         }
+
+    print('\n\nRequest (/attest):\n')
+    print(json.dumps(attest_request, indent=4))
+    print('\nResponse:\n')
+    print(json.dumps(response, indent=4))
 
     return web.json_response(data=response)
 
